@@ -104,7 +104,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
                         val line = document.getLineNumber(node.textRange.endOffset)
                         val path = CommonJSUtil.getRequireCallModulePath(node)
                         if (path != null) {
-                            runRequest(file, path, line, node, map)
+                            runRequest(file, path, line, "require('$path')", map)
                         }
                     }
                 }
@@ -112,8 +112,8 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         }
     }
 
-    private fun runRequest(file: VirtualFile, path: String, line: Int, node: JSCallExpression, map: MutableMap<Int, Pair<Long, Long>>) {
-        val request = EvaluateImportRequest(file.path, path, line, node.text)
+    private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Pair<Long, Long>>) {
+        val request = EvaluateImportRequest(file.path, path, line, string)
         CompletableFuture.supplyAsync({
             sendCommand(request) { _, answer ->
                 Pair(answer.element["package"].asJsonObject["size"].asLong,
