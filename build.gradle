@@ -1,0 +1,31 @@
+plugins {
+    id 'org.jetbrains.intellij' version '0.2.16'
+    id 'org.jetbrains.kotlin.jvm' version '1.1.3'
+}
+
+repositories {
+    mavenCentral()
+}
+
+intellij {
+    version 'IU-2017.2'
+    plugins = ['JavaScriptLanguage', 'NodeJS:172.3317.8']
+    pluginName 'ImportCost'
+    downloadSources false
+}
+
+publishPlugin {
+    username 'dennis.ushakov'
+    password passwordValue
+}
+
+// js packing
+project.afterEvaluate {
+    prepareSandbox.doLast {
+        def libraries = "$it.destinationDir/$intellij.pluginName/lib/"
+        copy {
+            from "$project.projectDir/javascript"
+            into libraries
+        }
+    }
+}

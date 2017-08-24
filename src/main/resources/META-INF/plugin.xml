@@ -1,0 +1,28 @@
+<idea-plugin>
+    <name>ImportCost</name>
+    <id>ImportCost</id>
+    <vendor email="dennis.ushakov@jetbrains.com" url="https://github.com/denofevil/import-cost">Dennis Ushakov, Andrey Starovoyt</vendor>
+    <description><![CDATA[
+        This extension will display inline in the editor the size of the imported package.
+Calculates the size of imports and requires.
+Currently supports:
+<ul>
+<li>Default importing: <code>import Func from 'utils';</code>
+<li>Entire content importing: <code>import * as Utils from 'utils';</code>
+<li>Selective importing: <code>import {Func} from 'utils';</code>
+<li>Selective importing with alias: <code>import {orig as alias} from 'utils';</code>
+<li>Submodule importing: <code>import Func from 'utils/Func';</code>
+<li>Require: <code>const Func = require('utils').Func;<code>
+</ul>
+    ]]></description>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>JavaScript</depends>
+    <depends>NodeJS</depends>
+    <depends>com.intellij.modules.xml</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <editor.linePainter implementation="com.github.denofevil.importCost.LinePainter"/>
+        <projectService serviceInterface="com.github.denofevil.importCost.LanguageService"
+                        serviceImplementation="com.github.denofevil.importCost.LanguageService"/>
+    </extensions>
+</idea-plugin>
