@@ -71,8 +71,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
                         val map = cache[file.path]!!
                         val startLine = document.getLineNumber(event.offset)
                         val max = Math.max(event.oldLength, event.newLength)
-                        val endOffset = event.offset + max
-                        val endLine = document.getLineNumber(if (document.textLength > endOffset) endOffset else document.textLength - 1)
+                        val endLine = getEndLine(event, max, document)
                         for (i in startLine..endLine) {
                             map.remove(i)
                         }
@@ -89,6 +88,12 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
             updateImports(document, file, psiFile, map)
         }
         return cache[file.path]!!.getOrDefault(line, failedSize)
+    }
+
+    private fun getEndLine(event: DocumentEvent, max: Int, document: Document): Int {
+        if (document.textLength == 0) return 0
+        val endOffset = event.offset + max
+        return document.getLineNumber(if (document.textLength > endOffset) endOffset else document.textLength - 1)
     }
 
     private fun updateImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Sizes>) {
