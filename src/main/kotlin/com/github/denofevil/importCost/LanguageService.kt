@@ -30,13 +30,13 @@ import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import javax.swing.event.DocumentListener
 
 class LanguageService(project: Project, private val psiManager: PsiManager, private val psiDocumentManager: PsiDocumentManager) : JSLanguageServiceBase(project) {
     companion object {
         private val KEY = Key<DocumentListener>("import-cost-listener")
     }
+
     private val failedSize = Pair(0L, 0L)
     private val evalQueue = MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
     private val alarm = SingleAlarm(Runnable {
@@ -141,12 +141,9 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
 
     private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Pair<Long, Long>>) {
         val request = EvaluateImportRequest(file.path, path, line, string)
-        CompletableFuture.supplyAsync({
-            sendCommand(request) { _, answer ->
-                Pair(answer.element["package"].asJsonObject["size"].asLong,
-                        answer.element["package"].asJsonObject["gzip"].asLong)
-            }!!.get()
-        }).thenApply { response ->
+        sendCommand(request) { _, answer ->
+            val response = Pair(answer.element["package"].asJsonObject["size"].asLong,
+                    answer.element["package"].asJsonObject["gzip"].asLong)
             map.put(line, response)
             alarm.cancelAndRequest()
         }
