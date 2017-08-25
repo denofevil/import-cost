@@ -1,5 +1,7 @@
 package com.github.denofevil.importCost
 
+import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
+import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
 import com.intellij.lang.javascript.frameworks.commonjs.CommonJSUtil
 import com.intellij.lang.javascript.psi.JSCallExpression
 import com.intellij.lang.javascript.psi.JSRecursiveWalkingElementVisitor
@@ -101,15 +103,40 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
             psiFile.accept(object : JSRecursiveWalkingElementVisitor() {
                 override fun visitJSCallExpression(node: JSCallExpression) {
                     if (node.isRequireCall) {
-                        val line = document.getLineNumber(node.textRange.endOffset)
                         val path = CommonJSUtil.getRequireCallModulePath(node)
                         if (path != null) {
+                            val line = document.getLineNumber(node.textRange.endOffset)
                             runRequest(file, path, line, "require('$path')", map)
                         }
                     }
                 }
+
+                override fun visitES6ImportDeclaration(node: ES6ImportDeclaration) {
+                    val path = ES6ImportPsiUtil.getUnquotedFromClauseOrModuleText(node)
+                    if (path != null) {
+                        val line = document.getLineNumber(node.textRange.endOffset)
+                        runRequest(file, path, line, compileImportString(node, path), map)
+                    }
+                }
             })
         }
+    }
+
+    private fun compileImportString(node: ES6ImportDeclaration, path: String): String {
+        val importString = if (node.importSpecifiers.isNotEmpty() || node.importedBindings.isNotEmpty()) {
+            val importSpecifiers = node.importSpecifiers.joinToString(",") {
+                it.canonicalText
+            }
+            val importedBindings = node.importedBindings.joinToString(",") { if (it.isNamespaceImport) "* as ${it.lastChild}" else it.lastChild.text }
+            when {
+                importSpecifiers.isEmpty() -> importedBindings
+                importedBindings.isEmpty() -> "{$importSpecifiers}"
+                else -> "{$importSpecifiers},$importedBindings"
+            }
+        } else {
+            "* as tmp"
+        }
+        return "import $importString from '$path'; console.log(${importString.replace("* as ", "")});"
     }
 
     private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Pair<Long, Long>>) {
