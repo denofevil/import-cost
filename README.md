@@ -1,5 +1,5 @@
 # Import Cost for WebStorm
-This plugin displays the size of the imported JavaScript package right in the editor. 
+This [plugin](https://plugins.jetbrains.com/plugin/9970-import-cost) displays the size of the imported JavaScript package right in the editor. 
 It can be installed in WebStorm, IntelliJ IDEA Ultimate, PhpStorm, PyCharm Pro, and RubyMine v2017.2 and above. 
 
 This plugin uses the [Import Cost](https://github.com/wix/import-cost) module that uses webpack with babili-webpack-plugin to calculate the size of the imported module.
@@ -10,6 +10,8 @@ You can read about the original idea behind the Import Cost module in this [blog
 
 ## Installing the plugin
 In the IDE open `Preferences | Plugins` and click `Browse repositories...`. Start typing `Import Cost` in the search bar to find the plugin, then click `Install`.
+
+Or you can download it from the [JetBrains Plugins Repository](https://plugins.jetbrains.com/plugin/9970-import-cost).
 
 ## Contributing
 Please report any issue with the plugin on [GitHub](https://github.com/denofevil/import-cost/issues). We welcome your pull requests.
