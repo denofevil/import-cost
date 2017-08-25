@@ -15,13 +15,13 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.Consumer
 import com.intellij.util.SingleAlarm
@@ -30,7 +30,6 @@ import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
 import java.util.*
-import javax.swing.event.DocumentListener
 
 class LanguageService(project: Project, private val psiManager: PsiManager, private val psiDocumentManager: PsiDocumentManager) : JSLanguageServiceBase(project) {
     companion object {
@@ -66,40 +65,46 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         val document = psiDocumentManager.getDocument(psiFile) ?: return failedSize
         EditorFactory.getInstance().getEditors(document, myProject).forEach { editor ->
             if (KEY.get(editor) == null) {
-                val listener = object : com.intellij.openapi.editor.event.DocumentListener {
-                    override fun documentChanged(event: DocumentEvent) {
-                        val map = cache[file.path]!!
-                        val startLine = document.getLineNumber(event.offset)
-                        val max = Math.max(event.oldLength, event.newLength)
-                        val endLine = getEndLine(event, max, document)
-                        for (i in startLine..endLine) {
-                            map.remove(i)
-                        }
-                        updateImports(document, file, psiFile, map)
-                    }
-                }
+                val listener = createListener(file)
                 document.addDocumentListener(listener, (editor as EditorImpl).disposable)
+                KEY.set(editor, listener)
             }
         }
 
         if (!cache.containsKey(file.path)) {
-            val map = ContainerUtil.newConcurrentMap<Int, Sizes>()
+            val map = createNewMap()
             cache.putIfAbsent(file.path, map)
-            updateImports(document, file, psiFile, map)
+            updateImports(document, file, map)
         }
         return cache[file.path]!!.getOrDefault(line, failedSize)
     }
 
-    private fun getEndLine(event: DocumentEvent, max: Int, document: Document): Int {
-        if (document.textLength == 0) return 0
-        val endOffset = event.offset + max
-        return document.getLineNumber(if (document.textLength > endOffset) endOffset else document.textLength - 1)
+    private fun createNewMap() = ContainerUtil.newConcurrentMap<Int, Sizes>()
+
+    private fun createListener(file: VirtualFile): DocumentListener {
+        return object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                val document = event.document
+
+                val map: MutableMap<Int, Sizes>
+                if (event.oldFragment.contains('\n') || event.newFragment.contains('\n')) {
+                    map = createNewMap()
+                    cache.put(file.path, map)
+                } else {
+                    map = cache[file.path]!!
+                    val line = document.getLineNumber(event.offset)
+                    map.remove(line)
+                }
+
+                updateImports(document, file, map)
+            }
+        }
     }
 
-    private fun updateImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Sizes>) {
+    private fun updateImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
         evalQueue.queue(object : Update(document) {
             override fun run() {
-                processImports(document, file, psiFile, map)
+                processImports(document, file, map)
             }
 
             override fun canEat(update: Update?): Boolean {
@@ -108,9 +113,10 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         })
     }
 
-    private fun processImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Sizes>) {
+    private fun processImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
         ApplicationManager.getApplication().runReadAction {
-            psiFile.accept(object : JSRecursiveWalkingElementVisitor() {
+            val psiFile = PsiDocumentManager.getInstance(myProject).getPsiFile(document)
+            psiFile?.accept(object : JSRecursiveWalkingElementVisitor() {
                 override fun visitJSCallExpression(node: JSCallExpression) {
                     if (node.isRequireCall) {
                         val path = CommonJSUtil.getRequireCallModulePath(node)
