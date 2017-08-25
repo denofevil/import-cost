@@ -1,5 +1,5 @@
 <idea-plugin>
-    <name>ImportCost</name>
+    <name>Import Cost</name>
     <id>ImportCost</id>
     <vendor email="dennis.ushakov@jetbrains.com" url="https://github.com/denofevil/import-cost">Dennis Ushakov, Andrey Starovoyt</vendor>
     <description><![CDATA[
