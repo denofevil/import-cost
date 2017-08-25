@@ -37,7 +37,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         private val KEY = Key<DocumentListener>("import-cost-listener")
     }
 
-    private val failedSize = Pair(0L, 0L)
+    private val failedSize = Sizes(0L, 0L)
     private val evalQueue = MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
     private val alarm = SingleAlarm(Runnable {
         val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
@@ -46,7 +46,10 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
             editor.contentComponent.repaint()
         }
     }, 100, this)
-    private val cache = ContainerUtil.newConcurrentMap<String, MutableMap<Int, Pair<Long, Long>>>()
+
+    data class Sizes(val size: Long, val gzip: Long)
+
+    private val cache = ContainerUtil.newConcurrentMap<String, MutableMap<Int, Sizes>>()
 
     override fun needInitToolWindow() = false
 
@@ -57,7 +60,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
                 JSLanguageServiceDefaultCacheData())
     }
 
-    fun getImportSize(file: VirtualFile, line: Int): Pair<Long, Long> {
+    fun getImportSize(file: VirtualFile, line: Int): Sizes {
         val psiFile = psiManager.findFile(file)
         if (psiFile == null || !(HtmlUtil.hasHtml(psiFile) || HtmlUtil.supportsXmlTypedHandlers(psiFile))) return failedSize
         val document = psiDocumentManager.getDocument(psiFile) ?: return failedSize
@@ -66,9 +69,11 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
                 val listener = object : com.intellij.openapi.editor.event.DocumentListener {
                     override fun documentChanged(event: DocumentEvent) {
                         val map = cache[file.path]!!
-                        val start = document.getLineNumber(event.offset)
-                        val end = document.getLineNumber(event.offset + Math.max(event.oldLength, event.newLength))
-                        for (i in start..end) {
+                        val startLine = document.getLineNumber(event.offset)
+                        val max = Math.max(event.oldLength, event.newLength)
+                        val endOffset = event.offset + max
+                        val endLine = document.getLineNumber(if (document.textLength > endOffset) endOffset else document.textLength - 1)
+                        for (i in startLine..endLine) {
                             map.remove(i)
                         }
                         updateImports(document, file, psiFile, map)
@@ -79,14 +84,14 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         }
 
         if (!cache.containsKey(file.path)) {
-            val map = ContainerUtil.newConcurrentMap<Int, Pair<Long, Long>>()
+            val map = ContainerUtil.newConcurrentMap<Int, Sizes>()
             cache.putIfAbsent(file.path, map)
             updateImports(document, file, psiFile, map)
         }
         return cache[file.path]!!.getOrDefault(line, failedSize)
     }
 
-    private fun updateImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Pair<Long, Long>>) {
+    private fun updateImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Sizes>) {
         evalQueue.queue(object : Update(document) {
             override fun run() {
                 processImports(document, file, psiFile, map)
@@ -98,7 +103,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         })
     }
 
-    private fun processImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Pair<Long, Long>>) {
+    private fun processImports(document: Document, file: VirtualFile, psiFile: PsiFile, map: MutableMap<Int, Sizes>) {
         ApplicationManager.getApplication().runReadAction {
             psiFile.accept(object : JSRecursiveWalkingElementVisitor() {
                 override fun visitJSCallExpression(node: JSCallExpression) {
@@ -124,10 +129,8 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
 
     private fun compileImportString(node: ES6ImportDeclaration, path: String): String {
         val importString = if (node.importSpecifiers.isNotEmpty() || node.importedBindings.isNotEmpty()) {
-            val importSpecifiers = node.importSpecifiers.joinToString(",") {
-                it.canonicalText
-            }
-            val importedBindings = node.importedBindings.joinToString(",") { if (it.isNamespaceImport) "* as ${it.lastChild}" else it.lastChild.text }
+            val importSpecifiers = node.importSpecifiers.mapNotNull { it.declaredName }.joinToString(",")
+            val importedBindings = node.importedBindings.joinToString(",") { if (it.isNamespaceImport) "* as ${it.lastChild.text}" else it.lastChild.text }
             when {
                 importSpecifiers.isEmpty() -> importedBindings
                 importedBindings.isEmpty() -> "{$importSpecifiers}"
@@ -139,10 +142,10 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         return "import $importString from '$path'; console.log(${importString.replace("* as ", "")});"
     }
 
-    private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Pair<Long, Long>>) {
+    private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Sizes>) {
         val request = EvaluateImportRequest(file.path, path, line, string)
         sendCommand(request) { _, answer ->
-            val response = Pair(answer.element["package"].asJsonObject["size"].asLong,
+            val response = Sizes(answer.element["package"].asJsonObject["size"].asLong,
                     answer.element["package"].asJsonObject["gzip"].asLong)
             map.put(line, response)
             alarm.cancelAndRequest()

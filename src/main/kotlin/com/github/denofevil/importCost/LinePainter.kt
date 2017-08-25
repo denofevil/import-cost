@@ -18,10 +18,10 @@ class LinePainter : EditorLinePainter() {
     override fun getLineExtensions(project: Project, file: VirtualFile, line: Int): MutableCollection<LineExtensionInfo> {
         val service = ServiceManager.getService(project, LanguageService::class.java)
         val importSize = service.getImportSize(file, line)
-        if (importSize.first == 0L) return arrayListOf()
-        val textAttributes = TextAttributes(getTextColor(importSize.first), null, null, EffectType.BOXED, Font.ITALIC)
-        return arrayListOf(LineExtensionInfo("  ${StringUtil.formatFileSize(importSize.first)}", textAttributes),
-                           LineExtensionInfo(" (gzip: ${StringUtil.formatFileSize(importSize.second)})", textAttributes))
+        if (importSize.size == 0L) return arrayListOf()
+        val textAttributes = TextAttributes(getTextColor(importSize.size), null, null, EffectType.BOXED, Font.ITALIC)
+        return arrayListOf(LineExtensionInfo("  ${StringUtil.formatFileSize(importSize.size)}", textAttributes),
+                LineExtensionInfo(" (gzip: ${StringUtil.formatFileSize(importSize.gzip)})", textAttributes))
     }
 
     private fun getTextColor(size: Long): Color? {
