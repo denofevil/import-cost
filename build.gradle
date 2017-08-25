@@ -14,11 +14,6 @@ intellij {
     downloadSources false
 }
 
-publishPlugin {
-    username 'dennis.ushakov'
-    password passwordValue
-}
-
 // js packing
 project.afterEvaluate {
     prepareSandbox.doLast {
