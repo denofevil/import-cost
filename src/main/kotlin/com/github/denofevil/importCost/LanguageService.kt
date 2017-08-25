@@ -139,7 +139,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
             when {
                 importSpecifiers.isEmpty() -> importedBindings
                 importedBindings.isEmpty() -> "{$importSpecifiers}"
-                else -> "{$importSpecifiers},$importedBindings"
+                else -> "$importedBindings,{$importSpecifiers}"
             }
         } else {
             "* as tmp"

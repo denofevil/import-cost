@@ -9,7 +9,7 @@ repositories {
 
 intellij {
     version 'IU-2017.2'
-    plugins = ['JavaScriptLanguage', 'NodeJS:172.3317.8']
+    plugins = ['JavaScriptLanguage']
     pluginName 'ImportCost'
     downloadSources false
 }
