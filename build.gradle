@@ -8,10 +8,11 @@ repositories {
 }
 
 intellij {
-    version 'IU-2017.2'
+    version 'IU-LATEST-EAP-SNAPSHOT'
     plugins = ['JavaScriptLanguage']
     pluginName 'ImportCost'
     downloadSources false
+    updateSinceUntilBuild false
 }
 
 // js packing
