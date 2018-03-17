@@ -89,7 +89,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
                 val map: MutableMap<Int, Sizes>
                 if (event.oldFragment.contains('\n') || event.newFragment.contains('\n')) {
                     map = createNewMap()
-                    cache.put(file.path, map)
+                    cache[file.path] = map
                 } else {
                     map = cache[file.path]!!
                     val line = document.getLineNumber(event.offset)
@@ -158,7 +158,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         sendCommand(request) { _, answer ->
             val response = Sizes(answer.element["package"].asJsonObject["size"].asLong,
                     answer.element["package"].asJsonObject["gzip"].asLong)
-            map.put(line, response)
+            map[line] = response
             alarm.cancelAndRequest()
         }
     }

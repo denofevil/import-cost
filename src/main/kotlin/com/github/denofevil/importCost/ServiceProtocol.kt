@@ -12,7 +12,7 @@ import com.intellij.util.Consumer
 class ServiceProtocol(private val project: Project, readyConsumer: Consumer<*>) : JSLanguageServiceNodeStdProtocolBase(project,
         readyConsumer) {
     override fun getNodeInterpreter(): String? {
-        val node = NodeJsInterpreterManager.getInstance(project).default ?: return null
+        val node = NodeJsInterpreterManager.getInstance(project).interpreter ?: return null
         var localInterpreter = NodeJsLocalInterpreter.tryCast(node)
         if (localInterpreter == null || !localInterpreter.isValid) {
             localInterpreter = NodeJsLocalInterpreterManager.getInstance().detectMostRelevant()
