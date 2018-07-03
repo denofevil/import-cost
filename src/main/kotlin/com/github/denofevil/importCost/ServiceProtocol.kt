@@ -6,6 +6,7 @@ import com.intellij.javascript.nodejs.interpreter.local.NodeJsLocalInterpreterMa
 import com.intellij.lang.javascript.service.JSLanguageServiceUtil
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceInitialState
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceNodeStdProtocolBase
+import com.intellij.lang.javascript.service.protocol.LocalFilePath
 import com.intellij.openapi.project.Project
 import com.intellij.util.Consumer
 
@@ -24,7 +25,7 @@ class ServiceProtocol(private val project: Project, readyConsumer: Consumer<*>) 
         val result = JSLanguageServiceInitialState()
         result.pluginName = "import-cost"
         val file = JSLanguageServiceUtil.getPluginDirectory(this.javaClass, "lib/index.js")
-        result.pluginPath = file.absolutePath
+        result.pluginPath = LocalFilePath.create(file.absolutePath)
         return result
     }
 
