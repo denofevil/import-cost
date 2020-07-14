@@ -1,13 +1,14 @@
 {
   "name": "ws-import-cost",
   "version": "1.0.0",
+  "author": "Dennis Ushakov",
+  "license": "Apache-2.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Dennis Ushakov",
-  "license": "Apache-2.0",
+  
   "dependencies": {
     "import-cost": "1.9.0"
   }

@@ -74,12 +74,13 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
             }
         }
 
-        if (!cache.containsKey(file.path)) {
-            val map = createNewMap()
+        var map: MutableMap<Int, Sizes>? = cache[file.path]
+        if (map == null) {
+            map = createNewMap()
             cache.putIfAbsent(file.path, map)
             updateImports(document, file, map)
         }
-        return cache[file.path]!!.getOrDefault(line, failedSize)
+        return map.getOrDefault(line, failedSize)
     }
 
     private fun createNewMap() = ConcurrentHashMap<Int, Sizes>()
@@ -89,12 +90,12 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
             override fun documentChanged(event: DocumentEvent) {
                 val document = event.document
 
-                val map: MutableMap<Int, Sizes>
+                val map: MutableMap<Int, Sizes>?
                 if (event.oldFragment.contains('\n') || event.newFragment.contains('\n')) {
                     map = createNewMap()
                     cache[file.path] = map
                 } else {
-                    map = cache[file.path]!!
+                    map = cache[file.path] ?: return
                     val line = document.getLineNumber(event.offset)
                     map.remove(line)
                 }
