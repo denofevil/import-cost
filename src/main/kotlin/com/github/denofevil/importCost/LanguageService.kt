@@ -23,18 +23,21 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
-import com.intellij.util.Consumer
+import com.intellij.util.EmptyConsumer
 import com.intellij.util.SingleAlarm
-import com.intellij.util.containers.ContainerUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
-class LanguageService(project: Project, private val psiManager: PsiManager, private val psiDocumentManager: PsiDocumentManager) : JSLanguageServiceBase(project) {
+class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     companion object {
         private val KEY = Key<DocumentListener>("import-cost-listener")
     }
+
+    private val psiManager: PsiManager = PsiManager.getInstance(project)
+    private val psiDocumentManager: PsiDocumentManager = PsiDocumentManager.getInstance(project)
 
     private val failedSize = Sizes(0L, 0L)
     private val evalQueue = MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
@@ -48,12 +51,12 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
 
     data class Sizes(val size: Long, val gzip: Long)
 
-    private val cache = ContainerUtil.newConcurrentMap<String, MutableMap<Int, Sizes>>()
+    private val cache = ConcurrentHashMap<String, MutableMap<Int, Sizes>>()
 
     override fun needInitToolWindow() = false
 
     override fun createLanguageServiceQueue(): JSLanguageServiceQueue {
-        val protocol = ServiceProtocol(myProject, Consumer.EMPTY_CONSUMER)
+        val protocol = ServiceProtocol(myProject, EmptyConsumer.getInstance<Any>())
 
         return JSLanguageServiceQueueImpl(myProject, protocol, myProcessConnector, myDefaultReporter,
                 JSLanguageServiceDefaultCacheData())
@@ -79,7 +82,7 @@ class LanguageService(project: Project, private val psiManager: PsiManager, priv
         return cache[file.path]!!.getOrDefault(line, failedSize)
     }
 
-    private fun createNewMap() = ContainerUtil.newConcurrentMap<Int, Sizes>()
+    private fun createNewMap() = ConcurrentHashMap<Int, Sizes>()
 
     private fun createListener(file: VirtualFile): DocumentListener {
         return object : DocumentListener {

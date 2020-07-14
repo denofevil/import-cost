@@ -2,7 +2,7 @@
     <name>Import Cost</name>
     <id>ImportCost</id>
     <version>1.0.7.2</version>
-    <idea-version since-build="182.3684" until-build="193.*"/>
+    <idea-version since-build="201" until-build="202.*"/>
     <vendor email="dennis.ushakov@jetbrains.com" url="https://github.com/denofevil/import-cost">Dennis Ushakov, Andrey Starovoyt</vendor>
     <description><![CDATA[
         This extension will display inline in the editor the size of the imported package.
@@ -23,7 +23,6 @@ Currently supports:
 
     <extensions defaultExtensionNs="com.intellij">
         <editor.linePainter implementation="com.github.denofevil.importCost.LinePainter"/>
-        <projectService serviceInterface="com.github.denofevil.importCost.LanguageService"
-                        serviceImplementation="com.github.denofevil.importCost.LanguageService"/>
+        <projectService serviceImplementation="com.github.denofevil.importCost.LanguageService"/>
     </extensions>
 </idea-plugin>
