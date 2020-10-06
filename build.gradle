@@ -16,7 +16,7 @@ intellij {
 
 patchPluginXml {
     sinceBuild = "202.1"
-    untilBuild = "202.*"
+    untilBuild = "203.*"
 }
 
 // js packing
