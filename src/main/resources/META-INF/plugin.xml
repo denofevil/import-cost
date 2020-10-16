@@ -1,8 +1,8 @@
 <idea-plugin>
     <name>Import Cost</name>
     <id>ImportCost</id>
-    <version>1.0.7.4</version>
-    <idea-version since-build="201" until-build="202.*"/>
+    <version>1.0.7.5</version>
+    <idea-version since-build="202.*" until-build="210.*"/>
     <vendor email="dennis.ushakov@jetbrains.com" url="https://github.com/denofevil/import-cost">Dennis Ushakov, Andrey Starovoyt</vendor>
     <description><![CDATA[
         This extension will display inline in the editor the size of the imported package.
