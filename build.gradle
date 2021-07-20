@@ -1,6 +1,6 @@
 plugins {
-    id "org.jetbrains.intellij" version "0.4.18"
-    id 'org.jetbrains.kotlin.jvm' version '1.3.72'
+    id 'org.jetbrains.intellij' version '1.1.3'
+    id 'org.jetbrains.kotlin.jvm' version '1.5.21'
 }
 
 repositories {
@@ -8,11 +8,11 @@ repositories {
 }
 
 intellij {
-    version 'IU-LATEST-EAP-SNAPSHOT'
+    version = 'IU-LATEST-EAP-SNAPSHOT'
     plugins = ['JavaScriptLanguage']
-    pluginName 'ImportCost'
-    downloadSources false
 }
+
+version '1.0.7.212'
 
 patchPluginXml {
     sinceBuild = "211.0"
