@@ -12,7 +12,7 @@ intellij {
     plugins = ['JavaScriptLanguage']
 }
 
-version '1.0.7.212'
+version '1.0.8.212'
 
 patchPluginXml {
     sinceBuild = "212.0"
@@ -22,7 +22,7 @@ patchPluginXml {
 // js packing
 project.afterEvaluate {
     prepareSandbox.doLast {
-        def libraries = "$it.destinationDir/$intellij.pluginName/lib/"
+        def libraries = "$it.destinationDir/import-cost/lib/"
         copy {
             from "$project.projectDir/javascript"
             into libraries
