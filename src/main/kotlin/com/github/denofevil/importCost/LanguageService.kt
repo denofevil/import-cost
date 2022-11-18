@@ -66,8 +66,12 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     }
 
     fun getImportSize(file: VirtualFile, line: Int): Sizes {
+        if (!file.isInLocalFileSystem || !file.isValid) return failedSize
+
         val psiFile = psiManager.findFile(file)
-        if (psiFile == null || !(HtmlUtil.hasHtml(psiFile) || HtmlUtil.supportsXmlTypedHandlers(psiFile))) return failedSize
+        if (psiFile == null || !(HtmlUtil.hasHtml(psiFile) || HtmlUtil.supportsXmlTypedHandlers(psiFile))) {
+            return failedSize
+        }
         val document = psiDocumentManager.getDocument(psiFile) ?: return failedSize
         EditorFactory.getInstance().getEditors(document, myProject).forEach { editor ->
             if (KEY.get(editor) == null) {
@@ -128,8 +132,12 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
                     if (node.isRequireCall) {
                         val path = CommonJSUtil.getModulePathIfRequireCall(node)
                         if (path != null) {
-                            val line = document.getLineNumber(node.textRange.endOffset)
-                            runRequest(file, path, line, "require('$path')", map)
+                            val endOffset = node.textRange.endOffset
+                            //handle uncommitted doc
+                            if (document.textLength > endOffset) {
+                                val line = document.getLineNumber(endOffset)
+                                runRequest(file, path, line, "require('$path')", map)
+                            }
                         }
                     }
                 }
@@ -137,8 +145,12 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
                 override fun visitES6ImportDeclaration(node: ES6ImportDeclaration) {
                     val path = ES6ImportPsiUtil.getUnquotedFromClauseOrModuleText(node)
                     if (path != null) {
-                        val line = document.getLineNumber(node.textRange.endOffset)
-                        runRequest(file, path, line, compileImportString(node, path), map)
+                        val endOffset = node.textRange.endOffset
+                        //handle uncommitted doc
+                        if (document.textLength > endOffset) {
+                            val line = document.getLineNumber(endOffset)
+                            runRequest(file, path, line, compileImportString(node, path), map)
+                        }
                     }
                 }
             })
