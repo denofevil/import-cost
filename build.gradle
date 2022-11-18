@@ -1,6 +1,6 @@
 plugins {
-    id 'org.jetbrains.intellij' version '1.5.2'
-    id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+    id 'org.jetbrains.intellij' version '1.10.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.21'
 }
 
 repositories {
@@ -9,14 +9,14 @@ repositories {
 
 intellij {
     version = 'IU-LATEST-EAP-SNAPSHOT'
-    plugins = ['JavaScriptLanguage']
+    plugins = ['JavaScript']
 }
 
-version '1.0.222'
+version '1.0.223'
 
 patchPluginXml {
-    sinceBuild = "222.0"
-    untilBuild = "222.*"
+    sinceBuild = "223.0"
+    untilBuild = "223.*"
 }
 
 // js packing

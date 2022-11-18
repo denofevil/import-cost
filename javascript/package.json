@@ -9,7 +9,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   
-  "dependencies": {
-    "import-cost": "1.9.0"
+  "devDependencies": {
+    "import-cost": "3.2.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "native-fs-adapter": "^1.0.0",
+    "terser-webpack-plugin": "^5.3.1",
+    "vscode-uri": "^3.0.3",
+    "fs-extra" : "^10.1.0"
   }
 }

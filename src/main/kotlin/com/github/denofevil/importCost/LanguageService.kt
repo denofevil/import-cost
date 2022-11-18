@@ -40,8 +40,9 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     private val psiDocumentManager: PsiDocumentManager = PsiDocumentManager.getInstance(project)
 
     private val failedSize = Sizes(0L, 0L)
-    private val evalQueue = MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
-    private val alarm = SingleAlarm(Runnable {
+    private val evalQueue =
+        MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
+    private val alarm = SingleAlarm({
         val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
         if (editor != null) {
             editor.contentComponent.revalidate()
@@ -58,8 +59,10 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     override fun createLanguageServiceQueue(): JSLanguageServiceQueue {
         val protocol = ServiceProtocol(myProject, EmptyConsumer.getInstance<Any>())
 
-        return JSLanguageServiceQueueImpl(myProject, protocol, myProcessConnector, myDefaultReporter,
-                JSLanguageServiceDefaultCacheData())
+        return JSLanguageServiceQueueImpl(
+            myProject, protocol, myProcessConnector, myDefaultReporter,
+            JSLanguageServiceDefaultCacheData()
+        )
     }
 
     fun getImportSize(file: VirtualFile, line: Int): Sizes {
@@ -123,7 +126,7 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
             psiFile?.accept(object : JSRecursiveWalkingElementVisitor() {
                 override fun visitJSCallExpression(node: JSCallExpression) {
                     if (node.isRequireCall) {
-                        val path = CommonJSUtil.getRequireCallModulePath(node)
+                        val path = CommonJSUtil.getModulePathIfRequireCall(node)
                         if (path != null) {
                             val line = document.getLineNumber(node.textRange.endOffset)
                             runRequest(file, path, line, "require('$path')", map)
@@ -145,7 +148,8 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     private fun compileImportString(node: ES6ImportDeclaration, path: String): String {
         val importString = if (node.importSpecifiers.isNotEmpty() || node.importedBindings.isNotEmpty()) {
             val importSpecifiers = node.importSpecifiers.mapNotNull { it.declaredName }.joinToString(",")
-            val importedBindings = node.importedBindings.joinToString(",") { if (it.isNamespaceImport) "* as ${it.lastChild.text}" else it.lastChild.text }
+            val importedBindings =
+                node.importedBindings.joinToString(",") { if (it.isNamespaceImport) "* as ${it.lastChild.text}" else it.lastChild.text }
             when {
                 importSpecifiers.isEmpty() -> importedBindings
                 importedBindings.isEmpty() -> "{$importSpecifiers}"
@@ -160,18 +164,21 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
     private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Sizes>) {
         val request = EvaluateImportRequest(file.path, path, line, string)
         sendCommand(request) { _, answer ->
-            val response = Sizes(answer.element["package"].asJsonObject["size"].asLong,
-                    answer.element["package"].asJsonObject["gzip"].asLong)
+            val response = Sizes(
+                answer.element["package"].asJsonObject["size"].asLong,
+                answer.element["package"].asJsonObject["gzip"].asLong
+            )
             map[line] = response
             alarm.cancelAndRequest()
         }
     }
 
-    @Suppress("unused")
-    class EvaluateImportRequest(val fileName: String,
-                                val name: String,
-                                val line: Int,
-                                val string: String) : JSLanguageServiceSimpleCommand, JSLanguageServiceObject {
+    class EvaluateImportRequest(
+        @Suppress("unused") val fileName: String,
+        val name: String,
+        val line: Int,
+        val string: String
+    ) : JSLanguageServiceSimpleCommand, JSLanguageServiceObject {
         override fun toSerializableObject() = this
 
         override fun getCommand() = "import-cost"
