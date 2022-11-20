@@ -24,7 +24,7 @@ class ImportCostConfigurable(project: Project) : ConfigurableBuilder(), Searchab
 
 
         val jbWarningField = JBTextField("", 30)
-        val warningComponent = LabeledComponent.create(jbWarningField, "Warning limit (kb)", BorderLayout.WEST)
+        val warningComponent = LabeledComponent.create(jbWarningField, "Warning limit (kB)", BorderLayout.WEST)
         component(warningComponent,
             { settings.getWarningLimit().toString() },
             { settings.setWarningLimit(StringUtil.parseInt(it, 50)) },
@@ -35,7 +35,7 @@ class ImportCostConfigurable(project: Project) : ConfigurableBuilder(), Searchab
         labeledComponent.anchor = warningComponent.label
 
         val jbErrorField = JBTextField("", 30)
-        val errorComponent = LabeledComponent.create(jbErrorField, "Error limit (kb)", BorderLayout.WEST)
+        val errorComponent = LabeledComponent.create(jbErrorField, "Error limit (kB)", BorderLayout.WEST)
         component(errorComponent,
             { settings.getErrorLimit().toString() },
             { settings.setErrorLimit(StringUtil.parseInt(it, 100)) },

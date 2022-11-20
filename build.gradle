@@ -12,7 +12,7 @@ intellij {
     plugins = ['JavaScript']
 }
 
-version '1.0.223'
+version '1.1.223'
 
 patchPluginXml {
     sinceBuild = "223.0"
