@@ -13,6 +13,7 @@ import com.intellij.lang.javascript.psi.JSCallExpression
 import com.intellij.lang.javascript.psi.JSFile
 import com.intellij.lang.javascript.psi.JSVarStatement
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
@@ -96,6 +97,6 @@ class ImportCostCodeVisionProvider : CodeVisionProviderBase() {
     }
 
     override fun handleClick(editor: Editor, element: PsiElement, event: MouseEvent?) {
-
+        ShowSettingsUtil.getInstance().showSettingsDialog(element.project, ImportCostConfigurable::class.java)
     }
 }

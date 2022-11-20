@@ -4,7 +4,7 @@ class ImportCostPlugin {
     // noinspection JSUnusedGlobalSymbols (service API)
     onMessage(p, messageWriter) {
         const {seq, arguments: packageInfo} = JSON.parse(p);
-        const config = {concurrent: false};
+        const config = {concurrent: true};
         getSize(packageInfo, config).then((pkg) => {
             messageWriter.write(JSON.stringify({request_seq: seq, package: pkg}))
         }).catch((e) => {
