@@ -18,6 +18,17 @@ class ImportCostSettings : PersistentStateComponent<InnerState> {
 
     fun getTextTemplate(): String = state.textTemplate
 
+    fun getErrorLimit(): Int = state.errorLimit
+    fun getWarningLimit(): Int = state.warningLimit
+
+    fun setErrorLimit(limit: Int) {
+        state = state.copy().also { it.errorLimit = limit }
+    }
+
+    fun setWarningLimit(limit: Int) {
+        state = state.copy().also { it.warningLimit = limit }
+    }
+
     fun setTextTemplate(text: String) {
         state = state.copy().also {
             it.textTemplate = text
@@ -34,11 +45,15 @@ class ImportCostSettings : PersistentStateComponent<InnerState> {
 class InnerState {
     var isCodeVision = false
     var textTemplate = "\$size (gzip \$gsize)"
+    var errorLimit = 100
+    var warningLimit = 50
 
     fun copy(): InnerState {
         val copy = InnerState()
         copy.isCodeVision = isCodeVision
         copy.textTemplate = textTemplate
+        copy.warningLimit = warningLimit
+        copy.errorLimit = errorLimit
         return copy
     }
 }

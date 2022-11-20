@@ -56,7 +56,7 @@ class ImportCostCodeVisionProvider : CodeVisionProviderBase() {
         val lineNumber = document.getLineNumber(element.textRange.endOffset)
         val importSize = service.getImportSize(vFile, lineNumber)
         if (importSize.size <= 0) return null
-        val info = calculateSizeInfo(importSize.size)
+        val info = calculateSizeInfo(project, importSize.size)
         return info.name + "#" + convertToText(project, importSize)
     }
 

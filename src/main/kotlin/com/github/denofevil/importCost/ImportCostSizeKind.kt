@@ -14,10 +14,11 @@ enum class ImportCostSizeKind {
     INFO, WARNING, ERROR
 }
 
-fun calculateSizeInfo(size: Long): ImportCostSizeKind {
+fun calculateSizeInfo(project: Project, size: Long): ImportCostSizeKind {
+    val settings = project.getService(ImportCostSettings::class.java)
     return when {
-        size > 100 * 1024 -> ImportCostSizeKind.ERROR
-        size > 50 * 1024 -> ImportCostSizeKind.WARNING
+        size > settings.getErrorLimit() * 1024 -> ImportCostSizeKind.ERROR
+        size > settings.getWarningLimit() * 1024 -> ImportCostSizeKind.WARNING
         else -> ImportCostSizeKind.INFO
     }
 }

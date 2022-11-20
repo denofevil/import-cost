@@ -14,7 +14,7 @@ class ImportCostLinePainter : EditorLinePainter() {
         val importSize: ImportCostLanguageService.Sizes = service.getImportSize(file, line)
         if (importSize.size <= 0) return emptyList()
 
-        val info = calculateSizeInfo(importSize.size)
+        val info = calculateSizeInfo(project, importSize.size)
         val textAttributes = getHandlerAttributes(info)
         return arrayListOf(LineExtensionInfo("  " + convertToText(project, importSize), textAttributes))
     }
