@@ -1,7 +1,10 @@
 package com.github.denofevil.importCost
 
+import com.intellij.lang.ecmascript6.psi.ES6ImportCall
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
+import com.intellij.lang.ecmascript6.resolve.JSFileReferencesUtil
+import com.intellij.lang.javascript.JSStringUtil
 import com.intellij.lang.javascript.frameworks.commonjs.CommonJSUtil
 import com.intellij.lang.javascript.psi.JSCallExpression
 import com.intellij.lang.javascript.psi.JSRecursiveWalkingElementVisitor
@@ -31,7 +34,7 @@ import com.intellij.xml.util.HtmlUtil
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-class LanguageService(project: Project) : JSLanguageServiceBase(project) {
+class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(project) {
     companion object {
         private val KEY = Key<DocumentListener>("import-cost-listener")
     }
@@ -48,7 +51,7 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
             editor.contentComponent.revalidate()
             editor.contentComponent.repaint()
         }
-    }, 100, this)
+    }, 500, this)
 
     data class Sizes(val size: Long, val gzip: Long)
 
@@ -131,7 +134,7 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
                 override fun visitJSCallExpression(node: JSCallExpression) {
                     if (node.isRequireCall) {
                         val path = CommonJSUtil.getModulePathIfRequireCall(node)
-                        if (path != null) {
+                        if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
                             val endOffset = node.textRange.endOffset
                             //handle uncommitted doc
                             if (document.textLength > endOffset) {
@@ -140,11 +143,26 @@ class LanguageService(project: Project) : JSLanguageServiceBase(project) {
                             }
                         }
                     }
+                    super.visitJSCallExpression(node)
+                }
+
+                override fun visitES6ImportCall(node: ES6ImportCall) {
+                    val path = node.referenceText?.let {  JSStringUtil.unquoteAndUnescapeString(it) }
+                    if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
+                        val endOffset = node.textRange.endOffset
+                        //handle uncommitted doc
+                        if (document.textLength > endOffset) {
+                            val line = document.getLineNumber(endOffset)
+                            runRequest(file, path, line, "import('$path')", map)
+                        }
+                    }
+
+                    super.visitES6ImportCall(node)
                 }
 
                 override fun visitES6ImportDeclaration(node: ES6ImportDeclaration) {
                     val path = ES6ImportPsiUtil.getUnquotedFromClauseOrModuleText(node)
-                    if (path != null) {
+                    if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
                         val endOffset = node.textRange.endOffset
                         //handle uncommitted doc
                         if (document.textLength > endOffset) {
