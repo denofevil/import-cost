@@ -24,6 +24,7 @@ import java.awt.event.MouseEvent
 class ImportCostCodeVisionProvider : CodeVisionProviderBase() {
     override val id: String get() = "Import Cost"
     override val name: String get() = "Import Cost"
+    override val groupId: String get() = "Import Cost"
     override val relativeOrderings: List<CodeVisionRelativeOrdering> get() = emptyList()
 
     override fun acceptsElement(element: PsiElement): Boolean {
