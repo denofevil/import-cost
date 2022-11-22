@@ -43,7 +43,7 @@ class ImportCostSettings : PersistentStateComponent<InnerState> {
 }
 
 class InnerState {
-    var isCodeVision = false
+    var isCodeVision = true
     var textTemplate = "\$size (gzip \$gsize)"
     var errorLimit = 100
     var warningLimit = 50
