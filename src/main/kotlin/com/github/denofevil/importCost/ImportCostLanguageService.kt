@@ -31,7 +31,6 @@ import com.intellij.util.SingleAlarm
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(project) {
@@ -44,14 +43,14 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
 
     private val failedSize = Sizes(0L, 0L)
     private val evalQueue =
-        MergingUpdateQueue("import-cost-eval", 300, true, null, this, null, false).setRestartTimerOnAdd(true)
+        MergingUpdateQueue("import-cost-eval", 1_000, true, null, this, null, false).setRestartTimerOnAdd(true)
     private val alarm = SingleAlarm({
         val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
         if (editor != null) {
             editor.contentComponent.revalidate()
             editor.contentComponent.repaint()
         }
-    }, 500, this)
+    }, 1_000, this)
 
     data class Sizes(val size: Long, val gzip: Long)
 
@@ -121,8 +120,8 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
                 processImports(document, file, map)
             }
 
-            override fun canEat(update: Update?): Boolean {
-                return Arrays.equals(update?.equalityObjects, equalityObjects)
+            override fun canEat(update: Update): Boolean {
+                return update.equalityObjects.contentEquals(equalityObjects)
             }
         })
     }
