@@ -12,11 +12,11 @@ intellij {
     plugins = ['JavaScript']
 }
 
-version '1.4.233'
+version '1.4.241'
 
 patchPluginXml {
-    sinceBuild = "233.0"
-    untilBuild = "233.*"
+    sinceBuild = "241.0"
+    untilBuild = "241.*"
 }
 
 // js packing
