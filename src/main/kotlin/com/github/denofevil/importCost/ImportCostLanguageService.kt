@@ -14,7 +14,7 @@ import com.intellij.lang.javascript.service.JSLanguageServiceQueue
 import com.intellij.lang.javascript.service.JSLanguageServiceQueueImpl
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceObject
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceSimpleCommand
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -28,6 +28,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.util.EmptyConsumer
 import com.intellij.util.SingleAlarm
+import com.intellij.util.concurrency.annotations.RequiresReadLock
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
@@ -117,7 +118,14 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     private fun updateImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
         evalQueue.queue(object : Update(document) {
             override fun run() {
-                processImports(document, file, map)
+                try {
+                    ReadAction.computeCancellable<Unit, Throwable> {
+                        processImports(document, file, map)
+                    }
+                }
+                catch (_: ReadAction.CannotReadException) {
+                    evalQueue.queue(this)
+                }
             }
 
             override fun canEat(update: Update): Boolean {
@@ -126,52 +134,51 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
         })
     }
 
+    @RequiresReadLock
     private fun processImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
-        ApplicationManager.getApplication().runReadAction {
-            val psiFile = PsiDocumentManager.getInstance(myProject).getPsiFile(document)
-            psiFile?.accept(object : JSRecursiveWalkingElementVisitor() {
-                override fun visitJSCallExpression(node: JSCallExpression) {
-                    if (node.isRequireCall) {
-                        val path = CommonJSUtil.getModulePathIfRequireCall(node)
-                        if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
-                            val endOffset = node.textRange.endOffset
-                            //handle uncommitted doc
-                            if (document.textLength > endOffset) {
-                                val line = document.getLineNumber(endOffset)
-                                runRequest(file, path, line, "require('$path')", map)
-                            }
-                        }
-                    }
-                    super.visitJSCallExpression(node)
-                }
-
-                override fun visitES6ImportCall(node: ES6ImportCall) {
-                    val path = node.referenceText?.let {  JSStringUtil.unquoteAndUnescapeString(it) }
+        val psiFile = PsiDocumentManager.getInstance(myProject).getPsiFile(document)
+        psiFile?.accept(object : JSRecursiveWalkingElementVisitor() {
+            override fun visitJSCallExpression(node: JSCallExpression) {
+                if (node.isRequireCall) {
+                    val path = CommonJSUtil.getModulePathIfRequireCall(node)
                     if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
                         val endOffset = node.textRange.endOffset
-                        //handle uncommitted doc
+                        // handle uncommitted doc
                         if (document.textLength > endOffset) {
                             val line = document.getLineNumber(endOffset)
-                            runRequest(file, path, line, "import('$path')", map)
-                        }
-                    }
-
-                    super.visitES6ImportCall(node)
-                }
-
-                override fun visitES6ImportDeclaration(node: ES6ImportDeclaration) {
-                    val path = ES6ImportPsiUtil.getUnquotedFromClauseOrModuleText(node)
-                    if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
-                        val endOffset = node.textRange.endOffset
-                        //handle uncommitted doc
-                        if (document.textLength > endOffset) {
-                            val line = document.getLineNumber(endOffset)
-                            runRequest(file, path, line, compileImportString(node, path), map)
+                            runRequest(file, path, line, "require('$path')", map)
                         }
                     }
                 }
-            })
-        }
+                super.visitJSCallExpression(node)
+            }
+
+            override fun visitES6ImportCall(node: ES6ImportCall) {
+                val path = node.referenceText?.let { JSStringUtil.unquoteAndUnescapeString(it) }
+                if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
+                    val endOffset = node.textRange.endOffset
+                    // handle uncommitted doc
+                    if (document.textLength > endOffset) {
+                        val line = document.getLineNumber(endOffset)
+                        runRequest(file, path, line, "import('$path')", map)
+                    }
+                }
+
+                super.visitES6ImportCall(node)
+            }
+
+            override fun visitES6ImportDeclaration(node: ES6ImportDeclaration) {
+                val path = ES6ImportPsiUtil.getUnquotedFromClauseOrModuleText(node)
+                if (!path.isNullOrEmpty() && !JSFileReferencesUtil.isRelative(path)) {
+                    val endOffset = node.textRange.endOffset
+                    // handle uncommitted doc
+                    if (document.textLength > endOffset) {
+                        val line = document.getLineNumber(endOffset)
+                        runRequest(file, path, line, compileImportString(node, path), map)
+                    }
+                }
+            }
+        })
     }
 
     private fun compileImportString(node: ES6ImportDeclaration, path: String): String {
