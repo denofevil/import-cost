@@ -210,7 +210,7 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     ) : JSLanguageServiceSimpleCommand, JSLanguageServiceObject {
         override fun toSerializableObject() = this
 
-        override fun getCommand() = "import-cost"
+        override val command: String = "import-cost"
     }
 }
 
