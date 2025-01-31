@@ -7,7 +7,11 @@ import com.intellij.lang.javascript.service.protocol.LocalFilePath
 import com.intellij.openapi.project.Project
 import com.intellij.util.Consumer
 
-class ServiceProtocol(project: Project, readyConsumer: Consumer<*>) : JSLanguageServiceNodeStdProtocolBase(project, readyConsumer) {
+class ServiceProtocol(project: Project, readyConsumer: Consumer<*>) :
+    JSLanguageServiceNodeStdProtocolBase("importcost", project, readyConsumer) {
+
+    override fun needReadActionToCreateState(): Boolean = false
+
     override fun createState(): JSLanguageServiceInitialState {
         val result = JSLanguageServiceInitialState()
         result.pluginName = "import-cost"

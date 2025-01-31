@@ -14,13 +14,13 @@ import com.intellij.lang.javascript.service.JSLanguageServiceQueue
 import com.intellij.lang.javascript.service.JSLanguageServiceQueueImpl
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceObject
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceSimpleCommand
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
@@ -118,12 +118,10 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     private fun updateImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
         evalQueue.queue(object : Update(document) {
             override fun run() {
-                try {
-                    ReadAction.computeCancellable<Unit, Throwable> {
-                        processImports(document, file, map)
-                    }
-                }
-                catch (_: ReadAction.CannotReadException) {
+                val processed = ProgressManager.getInstance().runInReadActionWithWriteActionPriority({
+                    processImports(document, file, map)
+                }, null)
+                if (!processed) {
                     evalQueue.queue(this)
                 }
             }
