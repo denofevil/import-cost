@@ -17,7 +17,8 @@ class ServiceProtocol(project: Project, readyConsumer: Consumer<*>) :
         result.pluginName = "import-cost"
         val file = JSLanguageServiceUtil.getPluginDirectory(this.javaClass, "lib/index.js")
             ?: throw IllegalStateException("import-cost plugin not found")
-        result.pluginPath = LocalFilePath.create(file.absolutePath)
+        val absolutePath: String? = file.absolutePath
+        result.pluginPath = LocalFilePath.create(absolutePath)
         return result
     }
 
