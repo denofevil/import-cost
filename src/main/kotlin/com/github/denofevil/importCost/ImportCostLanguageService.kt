@@ -22,7 +22,9 @@ import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
@@ -62,10 +64,19 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     override fun createLanguageServiceQueue(): JSLanguageServiceQueue {
         val protocol = ServiceProtocol(myProject, EmptyConsumer.getInstance<Any>())
 
-        return JSLanguageServiceQueueImpl(
+        val service = JSLanguageServiceQueueImpl(
             myProject, protocol, myProcessConnector, myDefaultReporter,
             JSLanguageServiceDefaultCacheData()
         )
+
+        if (Registry.`is`("js.language.service.log.messages")) {
+            protocol.startMessageStreamLogging("import-cost")
+            Disposer.register(service) {
+                protocol.stopMessageStreamLogging()
+            }
+        }
+
+        return service
     }
 
     fun getImportSize(file: VirtualFile, line: Int): Sizes {
