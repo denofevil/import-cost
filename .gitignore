@@ -4,3 +4,4 @@ build
 out
 gradle.properties
 javascript/node_modules
+.intellijPlatform

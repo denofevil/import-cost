@@ -1,22 +1,30 @@
 plugins {
-    id 'org.jetbrains.intellij' version '1.17.4'
+    id("org.jetbrains.intellij.platform") version "2.2.1"
     id 'org.jetbrains.kotlin.jvm' version '2.0.20'
 }
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
-intellij {
-    version = 'IU-LATEST-EAP-SNAPSHOT'
-    plugins = ['JavaScript']
+dependencies {
+    intellijPlatform {
+        webstorm("2024.3.2.1")
+        bundledPlugin("JavaScript")
+    }
 }
 
-version '1.4.243.1'
-
-patchPluginXml {
-    sinceBuild = "243.0"
-    untilBuild = "243.*"
+intellijPlatform {
+    pluginConfiguration {
+        version = "1.4.243.1"
+    }
+    patchPluginXml {
+        sinceBuild = "243.0"
+        untilBuild = "243.*"
+    }
 }
 
 // js packing
@@ -29,3 +37,7 @@ project.afterEvaluate {
         }
     }
 }
+
+//runIde {
+//    jvmArgs = ["-Didea.javascript.language.service.debug.options.importcost=--inspect=9229"]
+//}
