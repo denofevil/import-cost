@@ -19,11 +19,11 @@ dependencies {
 
 intellijPlatform {
     pluginConfiguration {
-        version = "1.4.243.1"
+        version = "1.4.251"
     }
     patchPluginXml {
-        sinceBuild = "243.0"
-        untilBuild = "243.*"
+        sinceBuild = "251.0"
+        untilBuild = "251.*"
     }
 }
 
