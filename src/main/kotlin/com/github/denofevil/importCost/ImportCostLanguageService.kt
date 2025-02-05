@@ -1,5 +1,6 @@
 package com.github.denofevil.importCost
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.lang.ecmascript6.psi.ES6ImportCall
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
@@ -31,6 +32,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.util.EmptyConsumer
+import com.intellij.util.FileContentUtilCore
 import com.intellij.util.concurrency.annotations.RequiresReadLock
 import com.intellij.xml.util.HtmlUtil
 import kotlinx.coroutines.*
@@ -89,8 +91,9 @@ class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLangua
                 withContext(Dispatchers.EDT) {
                     val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
                     if (editor != null) {
-                        editor.contentComponent.revalidate()
-                        editor.contentComponent.repaint()
+                        // DaemonCodeAnalyzer.restart is not enough because
+                        // CodeVisionPassFactory.createHighlightingPass checks for PsiFile modification stamp.
+                        FileContentUtilCore.reparseFiles(editor.virtualFile)
                     }
                 }
             }
