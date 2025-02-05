@@ -14,13 +14,15 @@ import com.intellij.lang.javascript.service.JSLanguageServiceQueue
 import com.intellij.lang.javascript.service.JSLanguageServiceQueueImpl
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceObject
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceSimpleCommand
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.readAction
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -29,14 +31,20 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
 import com.intellij.util.EmptyConsumer
-import com.intellij.util.SingleAlarm
 import com.intellij.util.concurrency.annotations.RequiresReadLock
-import com.intellij.util.ui.update.MergingUpdateQueue
-import com.intellij.util.ui.update.Update
 import com.intellij.xml.util.HtmlUtil
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.seconds
 
-class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(project) {
+@Service(Service.Level.PROJECT)
+@OptIn(FlowPreview::class)
+class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLanguageServiceBase(project) {
     companion object {
         private val KEY = Key<DocumentListener>("import-cost-listener")
     }
@@ -45,19 +53,49 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     private val psiDocumentManager: PsiDocumentManager = PsiDocumentManager.getInstance(project)
 
     private val failedSize = Sizes(0L, 0L)
-    private val evalQueue =
-        MergingUpdateQueue("import-cost-eval", 1_000, true, null, this, null, false).setRestartTimerOnAdd(true)
-    private val alarm = SingleAlarm({
-        val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
-        if (editor != null) {
-            editor.contentComponent.revalidate()
-            editor.contentComponent.repaint()
-        }
-    }, 1_000, this)
+    private val evalRequests = MutableSharedFlow<EvalDocumentRequest>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private val updateEditorRequests = MutableSharedFlow<Unit>(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     data class Sizes(val size: Long, val gzip: Long)
 
     private val cache = ConcurrentHashMap<String, MutableMap<Int, Sizes>>()
+
+    init {
+        cs.launch {
+            evalRequests
+                .distinctUntilChanged { prev, current ->
+                    prev.document == current.document && prev.modificationStamp == current.modificationStamp
+                }
+                .collect {
+                    delay(1.seconds)
+                    val requests = readAction {
+                        buildRequests(it.document, it.file)
+                    }
+                    for (request in requests) {
+                        // TODO replace with suspend function usage
+                        sendCommand(request) { _, answer ->
+                            val response = Sizes(
+                                answer.element["package"].asJsonObject["size"].asLong,
+                                answer.element["package"].asJsonObject["gzip"].asLong
+                            )
+                            it.map[request.line] = response
+                            updateEditorRequests.tryEmit(Unit)
+                        }
+                    }
+                }
+        }
+        cs.launch {
+            updateEditorRequests.debounce(1.seconds).collectLatest {
+                withContext(Dispatchers.EDT) {
+                    val editor = FileEditorManager.getInstance(myProject).selectedTextEditor
+                    if (editor != null) {
+                        editor.contentComponent.revalidate()
+                        editor.contentComponent.repaint()
+                    }
+                }
+            }
+        }
+    }
 
     override fun needInitToolWindow() = false
 
@@ -127,25 +165,13 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
     }
 
     private fun updateImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
-        evalQueue.queue(object : Update(document) {
-            override fun run() {
-                val processed = ProgressManager.getInstance().runInReadActionWithWriteActionPriority({
-                    processImports(document, file, map)
-                }, null)
-                if (!processed) {
-                    evalQueue.queue(this)
-                }
-            }
-
-            override fun canEat(update: Update): Boolean {
-                return update.equalityObjects.contentEquals(equalityObjects)
-            }
-        })
+        evalRequests.tryEmit(EvalDocumentRequest(document, file, map))
     }
 
     @RequiresReadLock
-    private fun processImports(document: Document, file: VirtualFile, map: MutableMap<Int, Sizes>) {
+    private fun buildRequests(document: Document, file: VirtualFile): List<EvaluateImportRequest> {
         val psiFile = PsiDocumentManager.getInstance(myProject).getPsiFile(document)
+        val result = mutableListOf<EvaluateImportRequest>()
         psiFile?.accept(object : JSRecursiveWalkingElementVisitor() {
             override fun visitJSCallExpression(node: JSCallExpression) {
                 if (node.isRequireCall) {
@@ -155,7 +181,7 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
                         // handle uncommitted doc
                         if (document.textLength > endOffset) {
                             val line = document.getLineNumber(endOffset)
-                            runRequest(file, path, line, "require('$path')", map)
+                            result.add(EvaluateImportRequest(file.path, path, line, "require('$path')"))
                         }
                     }
                 }
@@ -169,7 +195,7 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
                     // handle uncommitted doc
                     if (document.textLength > endOffset) {
                         val line = document.getLineNumber(endOffset)
-                        runRequest(file, path, line, "import('$path')", map)
+                        result.add(EvaluateImportRequest(file.path, path, line, "import('$path')"))
                     }
                 }
 
@@ -183,11 +209,12 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
                     // handle uncommitted doc
                     if (document.textLength > endOffset) {
                         val line = document.getLineNumber(endOffset)
-                        runRequest(file, path, line, compileImportString(node, path), map)
+                        result.add(EvaluateImportRequest(file.path, path, line, compileImportString(node, path)))
                     }
                 }
             }
         })
+        return result.toList()
     }
 
     private fun compileImportString(node: ES6ImportDeclaration, path: String): String {
@@ -206,18 +233,6 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
         return "import $importString from '$path'; console.log(${importString.replace("* as ", "")});"
     }
 
-    private fun runRequest(file: VirtualFile, path: String, line: Int, string: String, map: MutableMap<Int, Sizes>) {
-        val request = EvaluateImportRequest(file.path, path, line, string)
-        sendCommand(request) { _, answer ->
-            val response = Sizes(
-                answer.element["package"].asJsonObject["size"].asLong,
-                answer.element["package"].asJsonObject["gzip"].asLong
-            )
-            map[line] = response
-            alarm.cancelAndRequest()
-        }
-    }
-
     class EvaluateImportRequest(
         @Suppress("unused") val fileName: String,
         val name: String,
@@ -227,6 +242,10 @@ class ImportCostLanguageService(project: Project) : JSLanguageServiceBase(projec
         override fun toSerializableObject() = this
 
         override val command: String = "import-cost"
+    }
+
+    class EvalDocumentRequest(val document: Document, val file: VirtualFile, val map: MutableMap<Int, Sizes>) {
+        val modificationStamp = document.modificationStamp
     }
 }
 

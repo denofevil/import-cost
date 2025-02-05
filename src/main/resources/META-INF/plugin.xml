@@ -21,7 +21,6 @@ Currently supports:
 
     <extensions defaultExtensionNs="com.intellij">
         <editor.linePainter implementation="com.github.denofevil.importCost.ImportCostLinePainter"/>
-        <projectService serviceImplementation="com.github.denofevil.importCost.ImportCostLanguageService"/>
         <codeInsight.daemonBoundCodeVisionProvider implementation="com.github.denofevil.importCost.ImportCostCodeVisionProvider"/>
         <config.codeVisionGroupSettingProvider implementation="com.github.denofevil.importCost.ImportCostCodeVisionGroupSettingProvider" />
         <projectService serviceImplementation="com.github.denofevil.importCost.ImportCostSettings" />
