@@ -1,18 +1,20 @@
 plugins {
-    id("org.jetbrains.intellij.platform") version "2.2.1"
+    id("org.jetbrains.intellij.platform") version "2.3.0"
     id 'org.jetbrains.kotlin.jvm' version '2.0.20'
 }
 
 repositories {
+//    maven { url = uri("https://www.jetbrains.com/intellij-repository/snapshots") }
     mavenCentral()
     intellijPlatform {
         defaultRepositories()
+        snapshots()
     }
 }
 
 dependencies {
     intellijPlatform {
-        webstorm("2024.3.2.1")
+        webstorm("251.22821.57")
         bundledPlugin("JavaScript")
     }
 }

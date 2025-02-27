@@ -1,6 +1,5 @@
 package com.github.denofevil.importCost
 
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.lang.ecmascript6.psi.ES6ImportCall
 import com.intellij.lang.ecmascript6.psi.ES6ImportDeclaration
 import com.intellij.lang.ecmascript6.psi.impl.ES6ImportPsiUtil
@@ -31,7 +30,6 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiManager
-import com.intellij.util.EmptyConsumer
 import com.intellij.util.FileContentUtilCore
 import com.intellij.util.concurrency.annotations.RequiresReadLock
 import com.intellij.xml.util.HtmlUtil
@@ -74,15 +72,13 @@ class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLangua
                         buildRequests(it.document, it.file)
                     }
                     for (request in requests) {
-                        // TODO replace with suspend function usage
-                        sendCommand(request) { _, answer ->
-                            val response = Sizes(
-                                answer.element["package"].asJsonObject["size"].asLong,
-                                answer.element["package"].asJsonObject["gzip"].asLong
-                            )
-                            it.map[request.line] = response
-                            updateEditorRequests.tryEmit(Unit)
-                        }
+                        val answer = sendCommand(request)?.answer ?: continue
+                        val response = Sizes(
+                            answer.element["package"].asJsonObject["size"].asLong,
+                            answer.element["package"].asJsonObject["gzip"].asLong
+                        )
+                        it.map[request.line] = response
+                        updateEditorRequests.tryEmit(Unit)
                     }
                 }
         }
@@ -100,13 +96,11 @@ class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLangua
         }
     }
 
-    override fun needInitToolWindow() = false
-
-    override fun createLanguageServiceQueue(): JSLanguageServiceQueue {
-        val protocol = ServiceProtocol(myProject, EmptyConsumer.getInstance<Any>())
+    override suspend fun createLanguageServiceQueue(): JSLanguageServiceQueue {
+        val protocol = ServiceProtocol(myProject) {}
 
         val service = JSLanguageServiceQueueImpl(
-            myProject, protocol, myProcessConnector, myDefaultReporter,
+            myProject, protocol, null, myDefaultReporter,
             JSLanguageServiceDefaultCacheData()
         )
 
