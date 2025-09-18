@@ -104,12 +104,12 @@ class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLangua
             JSLanguageServiceDefaultCacheData()
         )
 
-        if (Registry.`is`("js.language.service.log.messages")) {
-            protocol.startMessageStreamLogging("import-cost")
-            Disposer.register(service) {
-                protocol.stopMessageStreamLogging()
-            }
-        }
+//        if (Registry.`is`("js.language.service.log.messages")) {
+//            protocol.startMessageStreamLogging("import-cost")
+//            Disposer.register(service) {
+//                protocol.stopMessageStreamLogging()
+//            }
+//        }
 
         return service
     }
