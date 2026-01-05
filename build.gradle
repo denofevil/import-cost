@@ -14,18 +14,18 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        webstorm("2025.2")
+        webstorm("2025.3")
         bundledPlugin("JavaScript")
     }
 }
 
 intellijPlatform {
     pluginConfiguration {
-        version = "1.4.252"
+        version = "1.4.253"
     }
     patchPluginXml {
-        sinceBuild = "252.0"
-        untilBuild = "252.*"
+        sinceBuild = "253.0"
+        untilBuild = "253.*"
     }
 }
 

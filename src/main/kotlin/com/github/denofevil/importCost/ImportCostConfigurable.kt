@@ -1,52 +1,36 @@
 package com.github.denofevil.importCost
 
-import com.intellij.openapi.options.ConfigurableBuilder
-import com.intellij.openapi.options.SearchableConfigurable
+import com.intellij.openapi.options.BoundSearchableConfigurable
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.LabeledComponent
-import com.intellij.openapi.util.text.StringUtil
-import com.intellij.ui.components.JBTextField
-import java.awt.BorderLayout
+import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.bindIntText
+import com.intellij.ui.dsl.builder.bindSelected
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 
-class ImportCostConfigurable(project: Project) : ConfigurableBuilder(), SearchableConfigurable {
-    init {
+class ImportCostConfigurable(private val project: Project) : BoundSearchableConfigurable("Import Cost", "ImportCost") {
+    override fun createPanel(): DialogPanel {
         val settings = project.getService(ImportCostSettings::class.java)
-        checkBox("Use code vision", settings::isCodeVision) { settings.setCodeVision(it) }
+        return panel {
+            row {
+                checkBox("Use code vision")
+                    .bindSelected(settings::isCodeVision, settings::setCodeVision)
+            }
 
-        val jbTextField = JBTextField("", 30)
-        val labeledComponent = LabeledComponent.create(jbTextField, "Presentation", BorderLayout.WEST)
-        component(labeledComponent,
-            { settings.getTextTemplate() },
-            { settings.setTextTemplate(it) },
-            { jbTextField.text },
-            { jbTextField.text = it }
-        )
+            row("Presentation") {
+                textField()
+                    .bindText(settings::getTextTemplate, settings::setTextTemplate)
+            }
 
+            row("Warning limit (kB)") {
+                intTextField()
+                    .bindIntText(settings::getWarningLimit, settings::setWarningLimit)
+            }
 
-        val jbWarningField = JBTextField("", 30)
-        val warningComponent = LabeledComponent.create(jbWarningField, "Warning limit (kB)", BorderLayout.WEST)
-        component(warningComponent,
-            { settings.getWarningLimit().toString() },
-            { settings.setWarningLimit(StringUtil.parseInt(it, 50)) },
-            { jbWarningField.text },
-            { jbWarningField.text = it }
-        )
-
-        labeledComponent.anchor = warningComponent.label
-
-        val jbErrorField = JBTextField("", 30)
-        val errorComponent = LabeledComponent.create(jbErrorField, "Error limit (kB)", BorderLayout.WEST)
-        component(errorComponent,
-            { settings.getErrorLimit().toString() },
-            { settings.setErrorLimit(StringUtil.parseInt(it, 100)) },
-            { jbErrorField.text },
-            { jbErrorField.text = it }
-        )
-
-        errorComponent.anchor = warningComponent.label
+            row("Error limit (kB)") {
+                intTextField()
+                    .bindIntText(settings::getErrorLimit, settings::setErrorLimit)
+            }
+        }
     }
-
-    override fun getDisplayName(): String = "Import Cost"
-
-    override fun getId(): String = "ImportCost"
 }
