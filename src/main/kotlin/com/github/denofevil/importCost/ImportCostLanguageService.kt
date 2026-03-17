@@ -9,7 +9,6 @@ import com.intellij.lang.javascript.frameworks.commonjs.CommonJSUtil
 import com.intellij.lang.javascript.psi.JSCallExpression
 import com.intellij.lang.javascript.psi.JSRecursiveWalkingElementVisitor
 import com.intellij.lang.javascript.service.JSLanguageServiceBase
-import com.intellij.lang.javascript.service.JSLanguageServiceDefaultCacheData
 import com.intellij.lang.javascript.service.JSLanguageServiceQueue
 import com.intellij.lang.javascript.service.JSLanguageServiceQueueImpl
 import com.intellij.lang.javascript.service.protocol.JSLanguageServiceObject
@@ -97,10 +96,7 @@ class ImportCostLanguageService(project: Project, cs: CoroutineScope) : JSLangua
     override suspend fun createLanguageServiceQueue(): JSLanguageServiceQueue {
         val protocol = ServiceProtocol(myProject) {}
 
-        val service = JSLanguageServiceQueueImpl(
-            myProject, protocol, null, myDefaultReporter,
-            JSLanguageServiceDefaultCacheData()
-        )
+        val service = JSLanguageServiceQueueImpl(myProject, protocol, null, myDefaultReporter)
 
 //        if (Registry.`is`("js.language.service.log.messages")) {
 //            protocol.startMessageStreamLogging("import-cost")
