@@ -34,6 +34,7 @@ dependencies {
     intellijPlatform {
         webstorm("261.22158.36")
         bundledPlugins(listOf("JavaScript"))
+        testBundledPlugins(listOf("JavaScript", "com.intellij.modules.json", "com.intellij.css"))
         testFramework(TestFrameworkType.Platform)
     }
 }
@@ -50,7 +51,6 @@ intellijPlatform {
     }
 }
 
-// js packing
 afterEvaluate {
     tasks.named<PrepareSandboxTask>("prepareSandbox") {
         doLast {
@@ -61,6 +61,21 @@ afterEvaluate {
                 logger.info("Copying javascript files to $libraries")
             }
         }
+    }
+
+    tasks.named<PrepareSandboxTask>("prepareTestSandbox") {
+        doLast {
+            val libraries = "${destinationDir.path}/ImportCost/lib/"
+            copy {
+                from("$projectDir/javascript")
+                into(libraries)
+                logger.info("Copying javascript files to test sandbox: $libraries")
+            }
+        }
+    }
+
+    tasks.withType<Test> {
+        dependsOn("prepareTestSandbox")
     }
 }
 

@@ -12,7 +12,7 @@ class ServiceProtocol(project: Project, readyConsumer: Consumer<*>) :
 
     override fun needReadActionToCreateState(): Boolean = false
 
-    override fun createState(): JSLanguageServiceInitialState {
+    public override fun createState(): JSLanguageServiceInitialState {
         val result = JSLanguageServiceInitialState()
         result.pluginName = "import-cost"
         val file = JSLanguageServiceUtil.getPluginDirectory(this.javaClass, "lib/index.js")
